@@ -1,0 +1,6 @@
+{
+  "name": "Booking Business Admin Dashboard",
+  "description": "Production-grade Supabase RLS-governed admin operations dashboard for appointment bookings, resource management, availability rules, and payments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
