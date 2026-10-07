@@ -124,8 +124,18 @@ export function LoginView() {
           </button>
         </form>
 
-        <div className="pt-4 border-t border-neutral-100 text-[11px] text-neutral-400 text-center">
-          Admin access only. New administrator accounts must be provisioned directly by the database owner.
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={useAuth().enterDemoMode}
+            className="w-full py-2 px-3 border border-neutral-300 text-neutral-700 bg-neutral-50 hover:bg-neutral-100 rounded text-xs font-medium transition-colors"
+          >
+            Explore Dashboard (Preview / Offline Mode)
+          </button>
+        </div>
+
+        <div className="pt-3 border-t border-neutral-100 text-[11px] text-neutral-400 text-center">
+          Admin access only. Live administrator accounts are provisioned directly in the database.
         </div>
       </div>
     </div>

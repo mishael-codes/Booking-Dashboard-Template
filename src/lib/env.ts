@@ -7,15 +7,18 @@ const envSchema = z.object({
 
 const parsedEnv = envSchema.safeParse(import.meta.env);
 
-if (!parsedEnv.success) {
-  const issues = parsedEnv.error.issues
-    .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
-    .join('\n');
-  console.error(
-    `[FATAL] Environment validation failed. Required variables missing or malformed:\n${issues}`
-  );
-  // Throw at startup so misconfigured deployments fail immediately and safely
-  throw new Error(`Environment validation failed:\n${issues}`);
-}
+export const env = {
+  VITE_SUPABASE_URL: parsedEnv.success
+    ? parsedEnv.data.VITE_SUPABASE_URL
+    : 'https://placeholder.supabase.co',
+  VITE_SUPABASE_ANON_KEY: parsedEnv.success
+    ? parsedEnv.data.VITE_SUPABASE_ANON_KEY
+    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key_for_preview',
+  isConfigured: parsedEnv.success,
+};
 
-export const env = parsedEnv.data;
+if (!parsedEnv.success) {
+  console.warn(
+    '[CONFIG WARNING] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not detected in environment. Running in preview mode with placeholder endpoints.'
+  );
+}

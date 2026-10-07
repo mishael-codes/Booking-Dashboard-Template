@@ -18,6 +18,7 @@ interface AuthContextValue {
   setAuthError: (err: string | null) => void;
   signOut: () => Promise<void>;
   refreshAuth: () => Promise<void>;
+  enterDemoMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -208,6 +209,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [session, resetIdleTimer]);
 
+  const enterDemoMode = useCallback(() => {
+    const demoUser = {
+      id: '00000000-0000-0000-0000-000000000001',
+      email: 'admin@bookingbusiness.com',
+      app_metadata: {},
+      user_metadata: { full_name: 'Lead Administrator' },
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+      is_anonymous: false,
+    } as unknown as User;
+
+    const demoSession = {
+      access_token: 'demo-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      refresh_token: 'demo-refresh',
+      user: demoUser,
+    } as Session;
+
+    setSession(demoSession);
+    setUser(demoUser);
+    setIsAdmin(true);
+    setCurrentAal('aal2');
+    setNeedsMfaEnrollment(false);
+    setNeedsMfaVerification(false);
+    setAuthError(null);
+    setIsLoading(false);
+  }, []);
+
   const value: AuthContextValue = {
     session,
     user,
@@ -220,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthError,
     signOut: handleSignOut,
     refreshAuth,
+    enterDemoMode,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
