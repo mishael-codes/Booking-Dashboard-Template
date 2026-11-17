@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { BookingStatus } from '../types/database';
+import { isDemoActive, getMockCalendarBookings, getMockCalendarTimeOff } from '../lib/demo';
 
 export interface CalendarBookingItem {
   id: string;
@@ -31,6 +32,10 @@ export function useCalendarBookings(fromUtc: string, toUtc: string) {
     queryKey: queryKeys.calendar.range(fromUtc, toUtc),
     enabled: Boolean(fromUtc && toUtc),
     queryFn: async (): Promise<CalendarBookingItem[]> => {
+      if (isDemoActive()) {
+        return getMockCalendarBookings();
+      }
+
       try {
         const { data, error } = await supabase
           .from('bookings')
@@ -67,6 +72,9 @@ export function useCalendarBookings(fromUtc: string, toUtc: string) {
           currency: b.currency,
         }));
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockCalendarBookings();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -80,6 +88,10 @@ export function useCalendarTimeOff(fromUtc: string, toUtc: string) {
     queryKey: queryKeys.calendar.timeOff(fromUtc, toUtc),
     enabled: Boolean(fromUtc && toUtc),
     queryFn: async (): Promise<CalendarTimeOffItem[]> => {
+      if (isDemoActive()) {
+        return getMockCalendarTimeOff();
+      }
+
       try {
         const { data, error } = await supabase
           .from('time_off')
@@ -90,6 +102,9 @@ export function useCalendarTimeOff(fromUtc: string, toUtc: string) {
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockCalendarTimeOff();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }

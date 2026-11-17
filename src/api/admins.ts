@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
+import { isDemoActive, getMockAdmins } from '../lib/demo';
 
 export interface AdminListItem {
   user_id: string;
@@ -14,6 +15,10 @@ export function useAdminsList() {
   return useQuery({
     queryKey: queryKeys.admins.all,
     queryFn: async (): Promise<AdminListItem[]> => {
+      if (isDemoActive()) {
+        return getMockAdmins();
+      }
+
       try {
         const { data, error } = await supabase
           .from('admins')
@@ -36,6 +41,9 @@ export function useAdminsList() {
           };
         });
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockAdmins();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }

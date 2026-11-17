@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { Database } from '../types/database';
+import { isDemoActive, getMockAuditLogs } from '../lib/demo';
 
 export type AuditLogRow = Database['public']['Tables']['audit_log']['Row'];
 
@@ -24,6 +25,17 @@ export function useAuditLog(
     queryKey: [...queryKeys.audit.log(cursor, tableName, recordId), { fromUtc, toUtc }],
     placeholderData: (prev) => prev,
     queryFn: async () => {
+      if (isDemoActive()) {
+        let items = getMockAuditLogs();
+        if (tableName) {
+          items = items.filter((i) => i.table_name === tableName);
+        }
+        if (recordId?.trim()) {
+          items = items.filter((i) => i.record_id === recordId.trim());
+        }
+        return { items, nextCursor: null };
+      }
+
       try {
         let query = supabase
           .from('audit_log')
@@ -69,6 +81,9 @@ export function useAuditLog(
 
         return { items, nextCursor };
       } catch (err) {
+        if (isDemoActive()) {
+          return { items: getMockAuditLogs(), nextCursor: null };
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }

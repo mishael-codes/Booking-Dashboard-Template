@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { Database, BookingStatus } from '../types/database';
+import { isDemoActive, getMockCustomers } from '../lib/demo';
 
 export type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
@@ -25,6 +26,18 @@ export function useCustomersList(page = 1, search?: string) {
     queryKey: queryKeys.customers.list(page, search),
     placeholderData: (prev) => prev,
     queryFn: async () => {
+      if (isDemoActive()) {
+        let list = getMockCustomers();
+        if (search?.trim()) {
+          const q = search.trim().toLowerCase();
+          list = list.filter((c) => (c.full_name?.toLowerCase().includes(q)) || (c.phone?.includes(q)));
+        }
+        return {
+          customers: list,
+          totalCount: list.length,
+        };
+      }
+
       try {
         let query = supabase
           .from('profiles')
@@ -49,6 +62,13 @@ export function useCustomersList(page = 1, search?: string) {
           totalCount: count ?? 0,
         };
       } catch (err) {
+        if (isDemoActive()) {
+          const list = getMockCustomers();
+          return {
+            customers: list,
+            totalCount: list.length,
+          };
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -62,6 +82,22 @@ export function useCustomerBookings(customerId: string | null) {
     queryKey: queryKeys.customers.bookings(customerId ?? ''),
     enabled: !!customerId,
     queryFn: async (): Promise<CustomerBookingItem[]> => {
+      if (isDemoActive()) {
+        return [
+          {
+            id: '33333333-3333-3333-3333-333333333301',
+            reference: 'BK-87291',
+            starts_at: new Date().toISOString(),
+            ends_at: new Date().toISOString(),
+            status: 'confirmed',
+            price_minor: 4500000,
+            currency: 'NGN',
+            service_name: 'Executive Wellness Consultation',
+            resource_name: 'Dr. Sarah Jenkins',
+          },
+        ];
+      }
+
       try {
         const { data, error } = await supabase
           .from('bookings')
@@ -93,6 +129,21 @@ export function useCustomerBookings(customerId: string | null) {
           resource_name: (b.resources as { name: string } | null)?.name ?? '—',
         }));
       } catch (err) {
+        if (isDemoActive()) {
+          return [
+            {
+              id: '33333333-3333-3333-3333-333333333301',
+              reference: 'BK-87291',
+              starts_at: new Date().toISOString(),
+              ends_at: new Date().toISOString(),
+              status: 'confirmed',
+              price_minor: 4500000,
+              currency: 'NGN',
+              service_name: 'Executive Wellness Consultation',
+              resource_name: 'Dr. Sarah Jenkins',
+            },
+          ];
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }

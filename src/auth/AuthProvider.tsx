@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../api/supabase';
 import { mapDatabaseError } from '../lib/errors';
 
+import { isDemoActive, setDemoActive } from '../lib/demo';
+
 export const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 interface AuthContextValue {
@@ -11,6 +13,7 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isDemoMode: boolean;
   currentAal: 'aal1' | 'aal2' | null;
   needsMfaEnrollment: boolean;
   needsMfaVerification: boolean;
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(isDemoActive());
   const [currentAal, setCurrentAal] = useState<'aal1' | 'aal2' | null>(null);
   const [needsMfaEnrollment, setNeedsMfaEnrollment] = useState(false);
   const [needsMfaVerification, setNeedsMfaVerification] = useState(false);
@@ -52,6 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (idleTimerRef.current) {
       clearTimeout(idleTimerRef.current);
     }
+    setDemoActive(false);
+    setIsDemoMode(false);
     queryClient.clear();
     setSession(null);
     setUser(null);
@@ -166,6 +172,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    if (isDemoActive()) {
+      enterDemoMode();
+      return () => {
+        isMounted = false;
+      };
+    }
+
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (isMounted) {
         validateSessionAndRoles(initialSession);
@@ -210,6 +223,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session, resetIdleTimer]);
 
   const enterDemoMode = useCallback(() => {
+    setDemoActive(true);
+    setIsDemoMode(true);
     const demoUser = {
       id: '00000000-0000-0000-0000-000000000001',
       email: 'admin@bookingbusiness.com',
@@ -243,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isLoading,
     isAdmin,
+    isDemoMode,
     currentAal,
     needsMfaEnrollment,
     needsMfaVerification,

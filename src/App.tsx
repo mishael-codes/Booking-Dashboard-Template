@@ -11,7 +11,10 @@ import { MfaEnrollView } from './auth/MfaEnrollView';
 import { MfaChallengeView } from './auth/MfaChallengeView';
 import { AccessDeniedView } from './auth/AccessDeniedView';
 
-// Lazy-loaded routes per performance requirements (Section 6)
+const StorefrontView = lazy(() =>
+  import('./features/storefront/StorefrontView').then((m) => ({ default: m.StorefrontView }))
+);
+
 const DashboardView = lazy(() =>
   import('./features/dashboard/DashboardView').then((m) => ({ default: m.DashboardView }))
 );
@@ -48,22 +51,19 @@ const AdminsListView = lazy(() =>
   import('./features/admins/AdminsListView').then((m) => ({ default: m.AdminsListView }))
 );
 
-// Fallback spinner that avoids layout shifting
 function RouteLoadingFallback() {
   return (
     <div className="py-16 flex flex-col items-center justify-center gap-2">
       <div className="w-5 h-5 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin" />
-      <span className="text-xs text-neutral-400 font-mono">Loading module...</span>
+      <span className="text-xs text-neutral-400 font-mono">Loading...</span>
     </div>
   );
 }
 
-// TanStack Query v5 client configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        // Do not retry 42501 (RLS forbidden) or 401/403
         const err = error as { code?: string };
         if (err?.code === '42501' || err?.code === 'PGRST301') return false;
         return failureCount < 1;
@@ -74,7 +74,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedApp() {
+function ProtectedAdminApp() {
   const {
     session,
     isLoading,
@@ -115,11 +115,7 @@ function ProtectedApp() {
     return <MfaChallengeView />;
   }
 
-  return (
-    <SettingsProvider>
-      <Layout />
-    </SettingsProvider>
-  );
+  return <Layout />;
 }
 
 export default function App() {
@@ -128,101 +124,118 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/*" element={<ProtectedApp />}>
+            <SettingsProvider>
+              <BrowserRouter>
+                <Routes>
+                  {/* Public White-Label Customer Storefront */}
                   <Route
-                    index
+                    path="/"
                     element={
                       <Suspense fallback={<RouteLoadingFallback />}>
-                        <DashboardView />
+                        <StorefrontView />
                       </Suspense>
                     }
                   />
-                  <Route
-                    path="bookings"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <BookingsListView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="calendar"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <CalendarView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="services"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <ServicesListView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="resources"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <ResourcesListView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="availability"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <AvailabilityEditorView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="payments"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <PaymentsListView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="customers"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <CustomersListView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="settings"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <SettingsView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="audit"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <AuditLogView />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="admins"
-                    element={
-                      <Suspense fallback={<RouteLoadingFallback />}>
-                        <AdminsListView />
-                      </Suspense>
-                    }
-                  />
+                  <Route path="/book" element={<Navigate to="/" replace />} />
+                  <Route path="/login" element={<Navigate to="/admin" replace />} />
+
+                  {/* Protected Admin Operations Dashboard */}
+                  <Route path="/admin" element={<ProtectedAdminApp />}>
+                    <Route
+                      index
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <DashboardView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="bookings"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <BookingsListView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="calendar"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <CalendarView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="services"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <ServicesListView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="resources"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <ResourcesListView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="availability"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <AvailabilityEditorView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="payments"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <PaymentsListView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="customers"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <CustomersListView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="settings"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <SettingsView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="audit"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <AuditLogView />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="admins"
+                      element={
+                        <Suspense fallback={<RouteLoadingFallback />}>
+                          <AdminsListView />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="*" element={<Navigate to="/admin" replace />} />
+                  </Route>
+
                   <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
+                </Routes>
+              </BrowserRouter>
+            </SettingsProvider>
           </AuthProvider>
         </ToastProvider>
       </QueryClientProvider>

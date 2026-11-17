@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
+import { isDemoActive, getMockAvailableSlots } from '../lib/demo';
 
 export interface AvailableSlot {
   resource_id: string;
@@ -20,6 +21,10 @@ export function useAvailableSlots(
     queryFn: async (): Promise<AvailableSlot[]> => {
       if (!serviceId || !dayDate) return [];
 
+      if (isDemoActive()) {
+        return getMockAvailableSlots(serviceId, dayDate, resourceId);
+      }
+
       try {
         const { data, error } = await supabase.rpc('get_available_slots', {
           p_service_id: serviceId,
@@ -30,6 +35,9 @@ export function useAvailableSlots(
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockAvailableSlots(serviceId, dayDate, resourceId);
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }

@@ -3,6 +3,14 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { Database } from '../types/database';
+import {
+  isDemoActive,
+  getMockAvailabilityRules,
+  saveMockAvailabilityRules,
+  getMockTimeOffList,
+  addMockTimeOff,
+  deleteMockTimeOff,
+} from '../lib/demo';
 
 export type AvailabilityRule = Database['public']['Tables']['availability_rules']['Row'];
 export type TimeOffRow = Database['public']['Tables']['time_off']['Row'];
@@ -18,6 +26,10 @@ export function useAvailabilityRules(resourceId: string | undefined) {
     queryKey: queryKeys.availability.rules(resourceId ?? ''),
     enabled: !!resourceId,
     queryFn: async (): Promise<AvailabilityRule[]> => {
+      if (isDemoActive() && resourceId) {
+        return getMockAvailabilityRules(resourceId);
+      }
+
       try {
         const { data, error } = await supabase
           .from('availability_rules')
@@ -29,6 +41,9 @@ export function useAvailabilityRules(resourceId: string | undefined) {
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive() && resourceId) {
+          return getMockAvailabilityRules(resourceId);
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -48,6 +63,10 @@ export function useSaveAvailabilityRules() {
       resourceId: string;
       rules: RuleInput[];
     }) => {
+      if (isDemoActive()) {
+        return saveMockAvailabilityRules(resourceId, rules);
+      }
+
       // 1. Delete existing rules for this resource
       const { error: delErr } = await supabase
         .from('availability_rules')
@@ -89,6 +108,10 @@ export function useTimeOffList(resourceId?: string) {
   return useQuery({
     queryKey: queryKeys.availability.timeOff(resourceId ?? 'all'),
     queryFn: async (): Promise<(TimeOffRow & { resource_name?: string })[]> => {
+      if (isDemoActive()) {
+        return getMockTimeOffList(resourceId);
+      }
+
       try {
         let query = supabase
           .from('time_off')
@@ -110,6 +133,9 @@ export function useTimeOffList(resourceId?: string) {
           resource_name: (row.resources as { name: string } | null)?.name ?? '—',
         }));
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockTimeOffList(resourceId);
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -129,7 +155,10 @@ export function useCheckTimeOffConflicts() {
       startsAtUtc: string;
       endsAtUtc: string;
     }) => {
-      // Find overlapping confirmed or pending bookings on this resource
+      if (isDemoActive()) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('bookings')
         .select('id, reference, starts_at, ends_at, contact_name, status')
@@ -159,6 +188,15 @@ export function useCreateTimeOff() {
       endsAtUtc: string;
       reason?: string | null;
     }) => {
+      if (isDemoActive()) {
+        return addMockTimeOff({
+          resource_id: resourceId,
+          starts_at: startsAtUtc,
+          ends_at: endsAtUtc,
+          reason: reason ?? null,
+        });
+      }
+
       const payload = {
         resource_id: resourceId,
         starts_at: startsAtUtc,
@@ -192,6 +230,10 @@ export function useDeleteTimeOff() {
 
   return useMutation({
     mutationFn: async (timeOffId: string) => {
+      if (isDemoActive()) {
+        return deleteMockTimeOff(timeOffId);
+      }
+
       const { error } = await supabase
         .from('time_off')
         .delete()

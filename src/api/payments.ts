@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { Database, PaymentStatus, BookingStatus } from '../types/database';
+import { isDemoActive, getMockPayments, createMockPayment } from '../lib/demo';
 
 export type PaymentRow = Database['public']['Tables']['payments']['Row'];
 
@@ -35,6 +36,11 @@ export function usePaymentsList(filters: PaymentFilters) {
     }),
     placeholderData: (prev) => prev,
     queryFn: async () => {
+      if (isDemoActive()) {
+        const list = getMockPayments();
+        return { items: list, totalCount: list.length };
+      }
+
       try {
         let query = supabase
           .from('payments')
@@ -104,6 +110,10 @@ export function usePaymentsList(filters: PaymentFilters) {
 
         return { items, totalCount: count ?? 0 };
       } catch (err) {
+        if (isDemoActive()) {
+          const list = getMockPayments();
+          return { items: list, totalCount: list.length };
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -129,7 +139,16 @@ export function useRecordManualPayment() {
       confirmPendingBooking?: boolean;
       bookingUpdatedAt?: string;
     }) => {
-      // 1. Insert manual payment record
+      if (isDemoActive()) {
+        return createMockPayment({
+          booking_id: bookingId,
+          provider: 'manual',
+          provider_reference: `manual-${Date.now()}`,
+          amount_minor: amountMinor,
+          currency: currency.toUpperCase(),
+        });
+      }
+
       const providerRef = `manual-${crypto.randomUUID()}`;
 
       const paymentPayload = {
@@ -149,7 +168,6 @@ export function useRecordManualPayment() {
 
       if (payErr) throw payErr;
 
-      // 2. If user chose to confirm a pending booking
       if (confirmPendingBooking && bookingUpdatedAt) {
         const { error: bookErr } = await supabase
           .from('bookings')
@@ -161,7 +179,6 @@ export function useRecordManualPayment() {
           .eq('status', 'pending')
           .eq('updated_at', bookingUpdatedAt);
 
-        // Note: if booking was already confirmed or updated, payment still succeeds
         if (bookErr) {
           console.warn('Booking status was not updated:', bookErr.message);
         }

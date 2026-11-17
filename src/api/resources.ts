@@ -3,6 +3,12 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { Database, ResourceKind } from '../types/database';
+import {
+  isDemoActive,
+  getMockResources,
+  createMockResource,
+  updateMockResource,
+} from '../lib/demo';
 
 export type ResourceRow = Database['public']['Tables']['resources']['Row'];
 
@@ -24,6 +30,11 @@ export function useResourcesList(activeOnly = false) {
   return useQuery({
     queryKey: [...queryKeys.resources.all, { activeOnly }],
     queryFn: async (): Promise<ResourceRow[]> => {
+      if (isDemoActive()) {
+        const list = getMockResources();
+        return activeOnly ? list.filter((r) => r.is_active) : list;
+      }
+
       try {
         let query = supabase
           .from('resources')
@@ -39,6 +50,10 @@ export function useResourcesList(activeOnly = false) {
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive()) {
+          const list = getMockResources();
+          return activeOnly ? list.filter((r) => r.is_active) : list;
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -52,6 +67,11 @@ export function useResourceDetail(id: string) {
     queryKey: queryKeys.resources.detail(id),
     enabled: !!id,
     queryFn: async (): Promise<ResourceRow> => {
+      if (isDemoActive()) {
+        const res = getMockResources().find((r) => r.id === id);
+        if (res) return res;
+      }
+
       try {
         const { data, error } = await supabase
           .from('resources')
@@ -62,6 +82,10 @@ export function useResourceDetail(id: string) {
         if (error) throw error;
         return data;
       } catch (err) {
+        if (isDemoActive()) {
+          const res = getMockResources().find((r) => r.id === id);
+          if (res) return res;
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -74,6 +98,16 @@ export function useResourceStaff(resourceId: string) {
     queryKey: queryKeys.resources.staff(resourceId),
     enabled: !!resourceId,
     queryFn: async (): Promise<ResourceStaffMember[]> => {
+      if (isDemoActive()) {
+        return [
+          {
+            user_id: '00000000-0000-0000-0000-000000000001',
+            full_name: 'Lead Specialist / Clinician',
+            phone: '+234 800 111 2233',
+          },
+        ];
+      }
+
       try {
         const { data, error } = await supabase
           .from('resource_staff')
@@ -94,6 +128,15 @@ export function useResourceStaff(resourceId: string) {
           };
         });
       } catch (err) {
+        if (isDemoActive()) {
+          return [
+            {
+              user_id: '00000000-0000-0000-0000-000000000001',
+              full_name: 'Lead Specialist / Clinician',
+              phone: '+234 800 111 2233',
+            },
+          ];
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -107,6 +150,18 @@ export function useResourceLinkedServices(resourceId: string) {
     queryKey: queryKeys.resources.linkedServices(resourceId),
     enabled: !!resourceId,
     queryFn: async (): Promise<ResourceLinkedService[]> => {
+      if (isDemoActive()) {
+        return [
+          {
+            service_id: '11111111-1111-1111-1111-111111111101',
+            name: 'Executive Wellness Consultation',
+            duration_minutes: 60,
+            price_minor: 4500000,
+            currency: 'NGN',
+          },
+        ];
+      }
+
       try {
         const { data, error } = await supabase
           .from('service_resources')
@@ -134,6 +189,17 @@ export function useResourceLinkedServices(resourceId: string) {
           };
         });
       } catch (err) {
+        if (isDemoActive()) {
+          return [
+            {
+              service_id: '11111111-1111-1111-1111-111111111101',
+              name: 'Executive Wellness Consultation',
+              duration_minutes: 60,
+              price_minor: 4500000,
+              currency: 'NGN',
+            },
+          ];
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -161,6 +227,17 @@ export function useCreateResource() {
       isActive: boolean;
       sortOrder: number;
     }) => {
+      if (isDemoActive()) {
+        return createMockResource({
+          name: name.trim(),
+          kind,
+          description: description?.trim() || null,
+          image_url: imageUrl?.trim() || null,
+          is_active: isActive,
+          sort_order: sortOrder,
+        });
+      }
+
       const payload = {
         name: name.trim(),
         kind,
@@ -208,6 +285,17 @@ export function useUpdateResource() {
       sortOrder: number;
       loadedUpdatedAt: string;
     }) => {
+      if (isDemoActive()) {
+        return updateMockResource(id, {
+          name: name.trim(),
+          kind,
+          description: description?.trim() || null,
+          image_url: imageUrl?.trim() || null,
+          is_active: isActive,
+          sort_order: sortOrder,
+        });
+      }
+
       const payload = {
         name: name.trim(),
         kind,
@@ -255,6 +343,10 @@ export function useToggleResourceActive() {
       isActive: boolean;
       loadedUpdatedAt: string;
     }) => {
+      if (isDemoActive()) {
+        return updateMockResource(id, { is_active: isActive });
+      }
+
       const { data, error } = await supabase
         .from('resources')
         .update({ is_active: isActive })

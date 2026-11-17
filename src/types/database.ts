@@ -89,6 +89,17 @@ export interface Database {
           hold_minutes: number;
           max_pending_per_user: number;
           updated_at: string;
+          tagline?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          address?: string | null;
+          logo_initials?: string | null;
+          brand_color?: string | null;
+          currency_symbol?: string | null;
+          cancellation_policy?: string | null;
+          enable_online_payments?: boolean | null;
+          require_deposit?: boolean | null;
+          deposit_percentage?: number | null;
         };
         Insert: {
           id?: boolean;
@@ -102,6 +113,17 @@ export interface Database {
           hold_minutes?: number;
           max_pending_per_user?: number;
           updated_at?: string;
+          tagline?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          address?: string | null;
+          logo_initials?: string | null;
+          brand_color?: string | null;
+          currency_symbol?: string | null;
+          cancellation_policy?: string | null;
+          enable_online_payments?: boolean | null;
+          require_deposit?: boolean | null;
+          deposit_percentage?: number | null;
         };
         Update: {
           id?: boolean;
@@ -115,6 +137,17 @@ export interface Database {
           hold_minutes?: number;
           max_pending_per_user?: number;
           updated_at?: string;
+          tagline?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          address?: string | null;
+          logo_initials?: string | null;
+          brand_color?: string | null;
+          currency_symbol?: string | null;
+          cancellation_policy?: string | null;
+          enable_online_payments?: boolean | null;
+          require_deposit?: boolean | null;
+          deposit_percentage?: number | null;
         };
         Relationships: [];
       };
@@ -533,6 +566,57 @@ export interface Database {
           bookings: number;
           booked_value_minor: number;
         }[];
+      };
+      create_public_booking: {
+        Args: {
+          p_service_id: string;
+          p_resource_id: string;
+          p_starts_at: string;
+          p_contact_name: string;
+          p_contact_email: string;
+          p_contact_phone?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: {
+          id: string;
+          reference: string;
+          status: BookingStatus;
+          starts_at: string;
+          ends_at: string;
+          price_minor: number;
+          currency: string;
+          hold_expires_at: string | null;
+          service_name: string;
+          resource_name: string;
+        }[];
+      };
+      lookup_booking_by_reference: {
+        Args: {
+          p_reference: string;
+          p_email: string;
+        };
+        Returns: {
+          id: string;
+          reference: string;
+          status: BookingStatus;
+          starts_at: string;
+          ends_at: string;
+          price_minor: number;
+          currency: string;
+          contact_name: string;
+          contact_email: string;
+          service_name: string;
+          resource_name: string;
+          hold_expires_at: string | null;
+        }[];
+      };
+      cancel_public_booking: {
+        Args: {
+          p_reference: string;
+          p_email: string;
+          p_reason?: string | null;
+        };
+        Returns: boolean;
       };
     };
     Enums: {

@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   Globe2,
+  ExternalLink,
 } from 'lucide-react';
 
 export function Layout() {
@@ -27,18 +28,20 @@ export function Layout() {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Bookings', href: '/bookings', icon: CalendarCheck2 },
-    { name: 'Calendar', href: '/calendar', icon: CalendarDays },
-    { name: 'Services', href: '/services', icon: Sparkles },
-    { name: 'Resources', href: '/resources', icon: Layers },
-    { name: 'Availability', href: '/availability', icon: Clock3 },
-    { name: 'Payments', href: '/payments', icon: CreditCard },
-    { name: 'Customers', href: '/customers', icon: Users },
-    { name: 'Settings', href: '/settings', icon: Settings },
-    { name: 'Audit Log', href: '/audit', icon: History },
-    { name: 'Admins', href: '/admins', icon: ShieldCheck },
+    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Bookings', href: '/admin/bookings', icon: CalendarCheck2 },
+    { name: 'Calendar', href: '/admin/calendar', icon: CalendarDays },
+    { name: 'Services', href: '/admin/services', icon: Sparkles },
+    { name: 'Resources', href: '/admin/resources', icon: Layers },
+    { name: 'Availability', href: '/admin/availability', icon: Clock3 },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+    { name: 'Customers', href: '/admin/customers', icon: Users },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Audit Log', href: '/admin/audit', icon: History },
+    { name: 'Admins', href: '/admin/admins', icon: ShieldCheck },
   ];
+
+  const initials = settings.logo_initials || settings.business_name.slice(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen flex bg-neutral-100/70 text-neutral-900 font-sans antialiased">
@@ -46,12 +49,22 @@ export function Layout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-neutral-200 shrink-0 select-none">
         {/* Brand header */}
         <div className="h-14 px-5 border-b border-neutral-200 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded bg-neutral-900 text-white flex items-center justify-center font-bold text-xs tracking-tight">
-              BK
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="w-7 h-7 rounded text-white flex items-center justify-center font-bold text-xs tracking-tight shrink-0 shadow-xs transition-colors"
+              style={{ backgroundColor: settings.brand_color || '#171717' }}
+            >
+              {initials}
             </div>
-            <div className="truncate font-semibold text-sm tracking-tight text-neutral-900">
-              {settings.business_name}
+            <div className="min-w-0">
+              <div className="truncate font-semibold text-xs tracking-tight text-neutral-900 leading-tight">
+                {settings.business_name}
+              </div>
+              {settings.tagline && (
+                <div className="truncate text-[10px] text-neutral-400 leading-tight">
+                  {settings.tagline}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -61,8 +74,8 @@ export function Layout() {
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive =
-              item.href === '/'
-                ? location.pathname === '/'
+              item.href === '/admin'
+                ? location.pathname === '/admin' || location.pathname === '/admin/'
                 : location.pathname.startsWith(item.href);
 
             return (
@@ -87,15 +100,24 @@ export function Layout() {
           })}
         </nav>
 
-        {/* Sidebar Footer with Session & Timezone */}
+        {/* Sidebar Footer with Live Storefront link, Session, Currency & Timezone */}
         <div className="p-3 border-t border-neutral-200 space-y-2">
-          {/* Timezone badge */}
-          <div className="px-3 py-1.5 rounded bg-neutral-50 border border-neutral-200/80 flex items-center gap-2 text-[11px] text-neutral-600">
-            <Globe2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-            <div className="truncate">
-              <span className="text-neutral-400">TZ:</span>{' '}
-              <span className="font-mono font-medium text-neutral-800">{settings.timezone}</span>
+          <NavLink
+            to="/"
+            className="px-3 py-2 rounded-md bg-neutral-900/5 hover:bg-neutral-900/10 border border-neutral-200 flex items-center justify-between text-xs font-semibold text-neutral-800 transition-colors"
+          >
+            <span>View Live Storefront</span>
+            <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
+          </NavLink>
+          {/* Timezone & Currency badge */}
+          <div className="px-3 py-1.5 rounded bg-neutral-50 border border-neutral-200/80 flex items-center justify-between text-[11px] text-neutral-600">
+            <div className="flex items-center gap-1.5 truncate">
+              <Globe2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+              <span className="font-mono font-medium text-neutral-800 truncate">{settings.timezone}</span>
             </div>
+            <span className="font-mono text-[10px] font-semibold px-1.5 py-0.5 bg-neutral-200/70 rounded text-neutral-700">
+              {settings.currency_symbol || ''} {settings.currency}
+            </span>
           </div>
 
           {/* User profile & Sign Out */}
@@ -104,7 +126,7 @@ export function Layout() {
               <div className="truncate text-neutral-800 font-medium text-[11px]">
                 {user?.email ?? 'Administrator'}
               </div>
-              <div className="text-[10px] text-emerald-700 flex items-center gap-1">
+              <div className="text-[10px] text-emerald-700 flex items-center gap-1 font-mono">
                 <span>MFA Verified (AAL2)</span>
               </div>
             </div>
@@ -123,11 +145,14 @@ export function Layout() {
 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-neutral-200 z-40 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded bg-neutral-900 text-white flex items-center justify-center font-bold text-xs">
-            BK
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className="w-7 h-7 rounded text-white flex items-center justify-center font-bold text-xs shrink-0"
+            style={{ backgroundColor: settings.brand_color || '#171717' }}
+          >
+            {initials}
           </div>
-          <span className="font-semibold text-sm text-neutral-900 truncate max-w-[200px]">
+          <span className="font-semibold text-xs text-neutral-900 truncate max-w-[200px]">
             {settings.business_name}
           </span>
         </div>

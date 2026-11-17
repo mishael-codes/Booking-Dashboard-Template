@@ -2,7 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
-import type { BookingStatus, PaymentStatus } from '../types/database';
+import type { BookingStatus } from '../types/database';
+import {
+  isDemoActive,
+  getMockBookingsList,
+  getMockBookingDetail,
+  updateMockBookingStatus,
+  createMockBooking,
+  rescheduleMockBooking,
+  getMockPayments,
+  getMockAuditLogs,
+} from '../lib/demo';
 
 export interface BookingListItem {
   id: string;
@@ -76,6 +86,11 @@ export function useBookingsList(filters: BookingFilters) {
     }),
     placeholderData: (prev) => prev,
     queryFn: async () => {
+      if (isDemoActive()) {
+        const res = getMockBookingsList(filters);
+        return { items: res.items, totalCount: res.total };
+      }
+
       try {
         let query = supabase
           .from('bookings')
@@ -121,7 +136,7 @@ export function useBookingsList(filters: BookingFilters) {
             query = query.eq('resource_id', filters.resourceId);
           }
 
-          // Free-text contact search (must be combined with bounded range and returns at most 1 page)
+          // Free-text contact search
           if (filters.searchContact?.trim()) {
             const term = filters.searchContact.trim();
             query = query.or(`contact_name.ilike.%${term}%,contact_email.ilike.%${term}%,contact_phone.ilike.%${term}%`);
@@ -157,6 +172,10 @@ export function useBookingsList(filters: BookingFilters) {
 
         return { items, totalCount: count ?? 0 };
       } catch (err) {
+        if (isDemoActive()) {
+          const res = getMockBookingsList(filters);
+          return { items: res.items, totalCount: res.total };
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -170,6 +189,11 @@ export function useBookingDetail(id: string) {
     queryKey: queryKeys.bookings.detail(id),
     enabled: !!id,
     queryFn: async (): Promise<BookingDetail> => {
+      if (isDemoActive()) {
+        const item = getMockBookingDetail(id);
+        if (item) return item;
+      }
+
       try {
         const { data, error } = await supabase
           .from('bookings')
@@ -211,6 +235,10 @@ export function useBookingDetail(id: string) {
           resource_name: res?.name ?? '—',
         };
       } catch (err) {
+        if (isDemoActive()) {
+          const item = getMockBookingDetail(id);
+          if (item) return item;
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -223,6 +251,9 @@ export function useBookingNotes(bookingId: string) {
     queryKey: queryKeys.bookings.notes(bookingId),
     enabled: !!bookingId,
     queryFn: async () => {
+      if (isDemoActive()) {
+        return { booking_id: bookingId, note: 'VIP client requested quiet suite and prompt consultation.' };
+      }
       try {
         const { data, error } = await supabase
           .from('booking_notes')
@@ -233,6 +264,9 @@ export function useBookingNotes(bookingId: string) {
         if (error) throw error;
         return data;
       } catch (err) {
+        if (isDemoActive()) {
+          return { booking_id: bookingId, note: 'VIP client requested quiet suite and prompt consultation.' };
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -245,6 +279,9 @@ export function useBookingPayments(bookingId: string) {
     queryKey: queryKeys.bookings.payments(bookingId),
     enabled: !!bookingId,
     queryFn: async () => {
+      if (isDemoActive()) {
+        return getMockPayments().filter((p) => p.booking_id === bookingId);
+      }
       try {
         const { data, error } = await supabase
           .from('payments')
@@ -255,6 +292,9 @@ export function useBookingPayments(bookingId: string) {
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockPayments().filter((p) => p.booking_id === bookingId);
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -267,6 +307,9 @@ export function useBookingAuditHistory(bookingId: string) {
     queryKey: queryKeys.bookings.auditHistory(bookingId),
     enabled: !!bookingId,
     queryFn: async () => {
+      if (isDemoActive()) {
+        return getMockAuditLogs().filter((l) => l.table_name === 'bookings' && l.record_id === bookingId);
+      }
       try {
         const { data, error } = await supabase
           .from('audit_log')
@@ -278,6 +321,9 @@ export function useBookingAuditHistory(bookingId: string) {
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockAuditLogs().filter((l) => l.table_name === 'bookings' && l.record_id === bookingId);
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -302,6 +348,10 @@ export function useUpdateBookingStatus() {
       loadedUpdatedAt: string;
       cancellationReason?: string;
     }) => {
+      if (isDemoActive()) {
+        return updateMockBookingStatus(id, status, cancellationReason);
+      }
+
       // Build whitelist payload
       const payload: {
         status: BookingStatus;
@@ -319,7 +369,7 @@ export function useUpdateBookingStatus() {
         payload.hold_expires_at = null;
       }
 
-      // Optimistic concurrency check: .eq('id', id).eq('updated_at', loadedUpdatedAt)
+      // Optimistic concurrency check
       const { data, error } = await supabase
         .from('bookings')
         .update(payload)
@@ -365,6 +415,10 @@ export function useRescheduleBooking() {
       endsAt: string;
       loadedUpdatedAt: string;
     }) => {
+      if (isDemoActive()) {
+        return rescheduleMockBooking(id, startsAt, endsAt, resourceId);
+      }
+
       const payload = {
         resource_id: resourceId,
         starts_at: startsAt,
@@ -418,6 +472,10 @@ export function useUpdateBookingContact() {
       notes?: string | null;
       loadedUpdatedAt: string;
     }) => {
+      if (isDemoActive()) {
+        return { id, updated_at: new Date().toISOString() };
+      }
+
       const payload = {
         contact_name: contactName,
         contact_email: contactEmail,
@@ -462,6 +520,10 @@ export function useUpsertBookingNotes() {
       bookingId: string;
       note: string;
     }) => {
+      if (isDemoActive()) {
+        return { booking_id: bookingId, note };
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -519,14 +581,27 @@ export function useCreateWalkInBooking() {
       contactPhone?: string | null;
       notes?: string | null;
     }) => {
-      // Generate client-side reference if required or let DB default; DB has unique 8-char code.
-      // Usually generated by DB trigger or sequence, but if DB expects reference:
-      // Generating 8-char random alphanumeric code
+      if (isDemoActive()) {
+        return createMockBooking({
+          service_id: serviceId,
+          resource_id: resourceId,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          price_minor: priceMinor,
+          currency,
+          contact_name: contactName,
+          contact_email: contactEmail,
+          contact_phone: contactPhone,
+          notes,
+          status: 'confirmed',
+        });
+      }
+
       const reference = Math.random().toString(36).substring(2, 10).toUpperCase();
 
       const payload = {
         reference,
-        customer_id: null, // walk-in / phone
+        customer_id: null,
         service_id: serviceId,
         resource_id: resourceId,
         starts_at: startsAt,

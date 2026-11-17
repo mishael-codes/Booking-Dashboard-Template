@@ -212,7 +212,7 @@ export function DashboardView() {
               </p>
             </div>
             <Link
-              to="/bookings"
+              to="/admin/bookings"
               className="text-xs text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1 font-medium"
             >
               <span>View all</span>

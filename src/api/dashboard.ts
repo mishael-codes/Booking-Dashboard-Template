@@ -3,6 +3,13 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { BookingStatus } from '../types/database';
+import {
+  isDemoActive,
+  getMockDashboardStats,
+  getMockBookingsByDay,
+  getMockTodayBookings,
+  getMockExpiringHolds,
+} from '../lib/demo';
 
 export interface DashboardStats {
   bookings_total: number;
@@ -46,6 +53,9 @@ export function useDashboardStats(fromUtc: string, toUtc: string) {
   return useQuery({
     queryKey: queryKeys.dashboard.stats(fromUtc, toUtc),
     queryFn: async (): Promise<DashboardStats> => {
+      if (isDemoActive()) {
+        return getMockDashboardStats();
+      }
       try {
         const { data, error } = await supabase.rpc('admin_dashboard_stats', {
           p_from: fromUtc,
@@ -61,6 +71,9 @@ export function useDashboardStats(fromUtc: string, toUtc: string) {
           revenue_minor: Number(row?.revenue_minor ?? 0),
         };
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockDashboardStats();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -73,6 +86,9 @@ export function useDashboardBookingsByDay(fromUtc: string, toUtc: string) {
   return useQuery({
     queryKey: queryKeys.dashboard.bookingsByDay(fromUtc, toUtc),
     queryFn: async (): Promise<BookingsByDay[]> => {
+      if (isDemoActive()) {
+        return getMockBookingsByDay();
+      }
       try {
         const { data, error } = await supabase.rpc('admin_bookings_by_day', {
           p_from: fromUtc,
@@ -86,6 +102,9 @@ export function useDashboardBookingsByDay(fromUtc: string, toUtc: string) {
           booked_value_minor: Number(row.booked_value_minor),
         }));
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockBookingsByDay();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -98,6 +117,9 @@ export function useTodayBookings(todayStartUtc: string, todayEndUtc: string) {
   return useQuery({
     queryKey: queryKeys.dashboard.todayBookings(todayStartUtc, todayEndUtc),
     queryFn: async (): Promise<TodayBooking[]> => {
+      if (isDemoActive()) {
+        return getMockTodayBookings();
+      }
       try {
         const { data, error } = await supabase
           .from('bookings')
@@ -133,6 +155,9 @@ export function useTodayBookings(todayStartUtc: string, todayEndUtc: string) {
           currency: b.currency,
         }));
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockTodayBookings();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -145,6 +170,9 @@ export function useExpiringHolds() {
   return useQuery({
     queryKey: queryKeys.dashboard.expiringHolds(),
     queryFn: async (): Promise<ExpiringHold[]> => {
+      if (isDemoActive()) {
+        return getMockExpiringHolds();
+      }
       try {
         const { data, error } = await supabase
           .from('bookings')
@@ -178,6 +206,9 @@ export function useExpiringHolds() {
           currency: b.currency,
         }));
       } catch (err) {
+        if (isDemoActive()) {
+          return getMockExpiringHolds();
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }

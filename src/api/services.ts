@@ -3,6 +3,12 @@ import { supabase } from './supabase';
 import { queryKeys } from './keys';
 import { mapDatabaseError } from '../lib/errors';
 import type { Database } from '../types/database';
+import {
+  isDemoActive,
+  getMockServices,
+  createMockService,
+  updateMockService,
+} from '../lib/demo';
 
 export type ServiceRow = Database['public']['Tables']['services']['Row'];
 
@@ -14,6 +20,11 @@ export function useServicesList(activeOnly = false) {
   return useQuery({
     queryKey: [...queryKeys.services.all, { activeOnly }],
     queryFn: async (): Promise<ServiceRow[]> => {
+      if (isDemoActive()) {
+        const list = getMockServices();
+        return activeOnly ? list.filter((s) => s.is_active) : list;
+      }
+
       try {
         let query = supabase
           .from('services')
@@ -29,6 +40,10 @@ export function useServicesList(activeOnly = false) {
         if (error) throw error;
         return data ?? [];
       } catch (err) {
+        if (isDemoActive()) {
+          const list = getMockServices();
+          return activeOnly ? list.filter((s) => s.is_active) : list;
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -42,6 +57,16 @@ export function useServiceDetail(id: string) {
     queryKey: queryKeys.services.detail(id),
     enabled: !!id,
     queryFn: async (): Promise<ServiceDetailWithResources> => {
+      if (isDemoActive()) {
+        const svc = getMockServices().find((s) => s.id === id);
+        if (svc) {
+          return {
+            ...svc,
+            resource_ids: ['22222222-2222-2222-2222-222222222201', '22222222-2222-2222-2222-222222222202'],
+          };
+        }
+      }
+
       try {
         const { data: service, error: svcErr } = await supabase
           .from('services')
@@ -63,6 +88,15 @@ export function useServiceDetail(id: string) {
           resource_ids: (sr ?? []).map((r) => r.resource_id),
         };
       } catch (err) {
+        if (isDemoActive()) {
+          const svc = getMockServices().find((s) => s.id === id);
+          if (svc) {
+            return {
+              ...svc,
+              resource_ids: ['22222222-2222-2222-2222-222222222201', '22222222-2222-2222-2222-222222222202'],
+            };
+          }
+        }
         const mapped = mapDatabaseError(err);
         throw new Error(mapped.message);
       }
@@ -97,7 +131,20 @@ export function useCreateService() {
       sortOrder: number;
       resourceIds: string[];
     }) => {
-      // 1. Insert service
+      if (isDemoActive()) {
+        return createMockService({
+          name: name.trim(),
+          slug: slug.trim(),
+          description: description?.trim() || null,
+          duration_minutes: durationMinutes,
+          price_minor: priceMinor,
+          currency: currency.toUpperCase(),
+          image_url: imageUrl?.trim() || null,
+          is_active: isActive,
+          sort_order: sortOrder,
+        });
+      }
+
       const payload = {
         name: name.trim(),
         slug: slug.trim(),
@@ -118,7 +165,6 @@ export function useCreateService() {
 
       if (svcErr) throw svcErr;
 
-      // 2. Insert service_resources if any
       if (resourceIds.length > 0) {
         const srRows = resourceIds.map((resId) => ({
           service_id: newService.id,
@@ -174,7 +220,20 @@ export function useUpdateService() {
       currentResourceIds: string[];
       loadedUpdatedAt: string;
     }) => {
-      // 1. Optimistic concurrency check on service update
+      if (isDemoActive()) {
+        return updateMockService(id, {
+          name: name.trim(),
+          slug: slug.trim(),
+          description: description?.trim() || null,
+          duration_minutes: durationMinutes,
+          price_minor: priceMinor,
+          currency: currency.toUpperCase(),
+          image_url: imageUrl?.trim() || null,
+          is_active: isActive,
+          sort_order: sortOrder,
+        });
+      }
+
       const payload = {
         name: name.trim(),
         slug: slug.trim(),
@@ -200,7 +259,6 @@ export function useUpdateService() {
         throw new Error('Concurrency conflict: This service changed while you were editing. Reload to see the latest version.');
       }
 
-      // 2. Diff and apply service_resources in one pass (no delete-all / insert-all!)
       const toAdd = resourceIds.filter((rid) => !currentResourceIds.includes(rid));
       const toRemove = currentResourceIds.filter((rid) => !resourceIds.includes(rid));
 
@@ -250,6 +308,10 @@ export function useToggleServiceActive() {
       isActive: boolean;
       loadedUpdatedAt: string;
     }) => {
+      if (isDemoActive()) {
+        return updateMockService(id, { is_active: isActive });
+      }
+
       const { data, error } = await supabase
         .from('services')
         .update({ is_active: isActive })
